@@ -1,0 +1,6 @@
+@SchoolManagentSystem_HostAddress = http://localhost:5004
+
+GET {{SchoolManagentSystem_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

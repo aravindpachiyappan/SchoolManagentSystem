@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../../../Frontend-Project/Practies-Projects/SchoolManagementSystem_BLAZOR/SchoolManagementSystem_BLAZOR.csproj" />
+  <Project Path="SchoolManagentSystem/SchoolManagentSystem_API.csproj" />
+</Solution>
