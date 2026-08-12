@@ -125,18 +125,31 @@ namespace SchoolManagentSystem_API.Controllers
                 Salary = getAllQuery.Salary,
                 JoiningDate = getAllQuery.JoiningDate,
                 SchoolID = getAllQuery.SchoolID,
+                SchoolName = getAllQuery.School?.SchoolName,
                 ClassID = getAllQuery.ClassID,
+                ClassName = getAllQuery.Class?.ClassName
             };
 
             return Ok(response);
         }
 
         [HttpPost("getall")]
-        public async Task<ActionResult<List<GetAllTeacherRecordsResponseDTO>>> GetAllTeacherRecords(GetAllTeacherRecordRequestDTO request)
+        public async Task<ActionResult> GetAllTeacherRecords(
+     GetAllTeacherRecordRequestDTO request)
         {
-            var query = _context.Teachers
-                .Where(x => x.IsActive && !x.IsDeleted)
-                .AsQueryable();
+            var query =
+                from teacher in _context.Teachers
+                join school in _context.Schools
+                    on teacher.SchoolID equals school.SchoolID
+                join cls in _context.Classes
+                    on teacher.ClassID equals cls.ClassID
+                where teacher.IsActive && !teacher.IsDeleted
+                select new
+                {
+                    Teacher = teacher,
+                    SchoolName = school.SchoolName,
+                    ClassName = cls.ClassName
+                };
 
             // Search
             if (!string.IsNullOrWhiteSpace(request.SearchString))
@@ -144,16 +157,18 @@ namespace SchoolManagentSystem_API.Controllers
                 var search = request.SearchString.Trim().ToLower();
 
                 query = query.Where(x =>
-                    x.TeacherName.ToLower().Contains(search) ||
-                    x.Email.ToLower().Contains(search) ||
-                    x.PhoneNumber.Contains(search) ||
-                    x.Qualification.ToLower().Contains(search));
+                    x.Teacher.TeacherName.ToLower().Contains(search) ||
+                    x.Teacher.Email.ToLower().Contains(search) ||
+                    x.Teacher.PhoneNumber.Contains(search) ||
+                    x.Teacher.Qualification.ToLower().Contains(search) ||
+                    x.SchoolName.ToLower().Contains(search) ||
+                    x.ClassName.ToLower().Contains(search));
             }
 
-            // Total Count
+            // Total count
             var totalCount = await query.CountAsync();
 
-            // Sanitize & Auto-correct page number if out of bounds
+            // Pagination
             var pageNo = request.PageNo <= 0 ? 1 : request.PageNo;
             var pageSize = request.PageSize <= 0 ? 10 : request.PageSize;
 
@@ -162,24 +177,27 @@ namespace SchoolManagentSystem_API.Controllers
                 pageNo = 1;
             }
 
-            // Pagination
             var teachers = await query
-                .OrderBy(x => x.TeacherID)
+                .OrderBy(x => x.Teacher.TeacherID)
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => new GetAllTeacherRecordsResponseDTO
                 {
-                    TeacherID = x.TeacherID,
-                    TeacherName = x.TeacherName,
-                    Gender = x.Gender,
-                    Qualification = x.Qualification,
-                    Address = x.Address,
-                    PhoneNumber = x.PhoneNumber,
-                    Email = x.Email,
-                    Salary = x.Salary,
-                    JoiningDate = x.JoiningDate,
-                    SchoolID = x.SchoolID,
-                    ClassID = x.ClassID
+                    TeacherID = x.Teacher.TeacherID,
+                    TeacherName = x.Teacher.TeacherName,
+                    Gender = x.Teacher.Gender,
+                    Qualification = x.Teacher.Qualification,
+                    Address = x.Teacher.Address,
+                    PhoneNumber = x.Teacher.PhoneNumber,
+                    Email = x.Teacher.Email,
+                    Salary = x.Teacher.Salary,
+                    JoiningDate = x.Teacher.JoiningDate,
+
+                    SchoolID = x.Teacher.SchoolID,
+                    SchoolName = x.SchoolName,
+
+                    ClassID = x.Teacher.ClassID,
+                    ClassName = x.ClassName
                 })
                 .ToListAsync();
 

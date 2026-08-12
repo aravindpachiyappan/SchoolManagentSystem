@@ -19,11 +19,22 @@ namespace SchoolManagentSystem_API.Controllers
         }
 
         [HttpPost("student-list")]
-        public async Task<ActionResult<List<GetAllStudentListDetailsResponseDTO>>> GetAllStudentDetails(GetAllStudentListDetailsRequestDTO request)
+        public async Task<ActionResult> GetAllStudentDetails(
+    GetAllStudentListDetailsRequestDTO request)
         {
-            var query = _context.Students
-    .Where(x => x.IsActive && !x.IsDeleted)
-    .AsQueryable();
+            var query =
+                from student in _context.Students
+                join cls in _context.Classes
+                    on student.ClassID equals cls.ClassID
+                join school in _context.Schools
+                    on student.SchoolID equals school.SchoolID
+                where student.IsActive && !student.IsDeleted
+                select new
+                {
+                    Student = student,
+                    ClassName = cls.ClassName,
+                    SchoolName = school.SchoolName
+                };
 
             // Search
             if (!string.IsNullOrWhiteSpace(request.SearchString))
@@ -31,48 +42,56 @@ namespace SchoolManagentSystem_API.Controllers
                 var search = request.SearchString.Trim().ToLower();
 
                 query = query.Where(x =>
-                    x.StudentName.ToLower().Contains(search) ||
-                    x.RollNumber.ToLower().Contains(search) ||
-                    x.Email.ToLower().Contains(search) ||
-                    x.FatherName.ToLower().Contains(search) ||
-                    x.MotherName.ToLower().Contains(search) ||
-                    x.FatherPhoneNumber.Contains(search) ||
-                    x.MotherPhoneNumber.Contains(search));
+                    x.Student.StudentName.ToLower().Contains(search) ||
+                    x.Student.RollNumber.ToLower().Contains(search) ||
+                    x.Student.Email.ToLower().Contains(search) ||
+                    x.Student.FatherName.ToLower().Contains(search) ||
+                    x.Student.MotherName.ToLower().Contains(search) ||
+                    x.Student.FatherPhoneNumber.Contains(search) ||
+                    x.Student.MotherPhoneNumber.Contains(search) ||
+                    x.ClassName.ToLower().Contains(search) ||
+                    x.SchoolName.ToLower().Contains(search));
             }
 
+            // Total Count
             var totalCount = await query.CountAsync();
 
-            // Sanitize & Auto-correct page number if out of bounds
+            // Page number & page size
             var pageNo = request.PageNo <= 0 ? 1 : request.PageNo;
             var pageSize = request.PageSize <= 0 ? 10 : request.PageSize;
 
+            // Auto-correct page number
             if ((pageNo - 1) * pageSize >= totalCount && totalCount > 0)
             {
                 pageNo = 1;
             }
 
+            // Pagination + Projection
             var students = await query
-                .OrderBy(x => x.StudentId)
+                .OrderBy(x => x.Student.StudentId)
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => new GetAllStudentListDetailsResponseDTO
                 {
-                    StudentId = x.StudentId,
-                    StudentName = x.StudentName,
-                    RollNumber = x.RollNumber,
-                    Email = x.Email,
-                    Gender = x.Gender,
-                    StudentBirthDate = x.StudentBirthDate,
-                    BloodGroup = x.BloodGroup,
-                    Address = x.Address,
-                    FatherName = x.FatherName,
-                    MotherName = x.MotherName,
-                    FatherPhoneNumber = x.FatherPhoneNumber,
-                    MotherPhoneNumber = x.MotherPhoneNumber,
-                    SchoolID = x.SchoolID,
-                    ClassID = x.ClassID,
-                    ClassName = x.Class.ClassName,
-                    SchoolName = x.School.SchoolName
+                    StudentId = x.Student.StudentId,
+                    StudentName = x.Student.StudentName,
+                    RollNumber = x.Student.RollNumber,
+                    Email = x.Student.Email,
+                    Gender = x.Student.Gender,
+                    StudentBirthDate = x.Student.StudentBirthDate,
+                    BloodGroup = x.Student.BloodGroup,
+                    Address = x.Student.Address,
+
+                    FatherName = x.Student.FatherName,
+                    MotherName = x.Student.MotherName,
+                    FatherPhoneNumber = x.Student.FatherPhoneNumber,
+                    MotherPhoneNumber = x.Student.MotherPhoneNumber,
+
+                    SchoolID = x.Student.SchoolID,
+                    SchoolName = x.SchoolName,
+
+                    ClassID = x.Student.ClassID,
+                    ClassName = x.ClassName
                 })
                 .ToListAsync();
 

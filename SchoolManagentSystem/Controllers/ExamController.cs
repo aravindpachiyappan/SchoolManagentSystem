@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SchoolManagentSystem_API.DBContext;
 using SchoolManagentSystem_API.Dtos.ExamDTO;
+using SchoolManagentSystem_API.Entity;
 
 namespace SchoolManagentSystem_API.Controllers
 {
@@ -83,5 +84,86 @@ namespace SchoolManagentSystem_API.Controllers
                 Data = exams
             });
         }
+
+        [HttpPost("create-exam")]
+        public async Task<ActionResult> CreateExam(CreateExamRequestDTO request)
+        {
+            try
+            {
+                // Check Class exists
+                var classExists = await _context.Classes
+                    .FirstOrDefaultAsync(x =>
+                        x.ClassID == request.ClassId &&
+                        x.IsActive &&
+                        !x.IsDeleted);
+
+                if (classExists == null)
+                {
+                    return NotFound(new
+                    {
+                        Message = "Class not found."
+                    });
+                }
+
+                DateTime examDate;
+
+                if (request.ExamDate.HasValue)
+                {
+                    examDate = DateTime.SpecifyKind(
+                        request.ExamDate.Value,
+                        DateTimeKind.Utc);
+                }
+                else
+                {
+                    examDate = DateTime.UtcNow;
+                }
+
+                // Create Exam
+                var exam = new Exam
+                {
+                    ClassID = request.ClassId,
+                    ExamName = request.ExamName.Trim(),
+                    ExamDate = examDate,
+
+                    // Static default values
+                    ExamType = "General Exam",
+                    TotalMarks = 100,
+
+                    // BaseEntity values
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    CreatedBy = 1,
+                    UpdatedBy = 1
+                };
+
+                _context.Exams.Add(exam);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    Message = "Exam created successfully.",
+                    ExamID = exam.ExamID
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An error occurred while creating the exam.",
+                    Error = ex.InnerException?.Message ?? ex.Message
+                });
+            }
+        }
     }
 }
+
+public class CreateExamRequestDTO
+{
+    public int ClassId { get; set; }
+    public string ExamName { get; set; } = string.Empty;
+    public DateTime? ExamDate { get; set; }
+}
+

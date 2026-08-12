@@ -23,5 +23,7 @@
         public int SchoolID { get; set; }
 
         public int ClassID { get; set; }
+        public string SchoolName { get; set; } = string.Empty;
+        public string ClassName { get; set; } = string.Empty;
     }
 }

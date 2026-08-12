@@ -12,6 +12,8 @@
         public decimal Salary { get; set; }
         public DateTime JoiningDate { get; set; }
         public int SchoolID { get; set; }
+        public string? SchoolName { get; set; } = string.Empty;
         public int ClassID { get; set; }
+        public string ClassName { get; set; } = string.Empty;
     }
 }

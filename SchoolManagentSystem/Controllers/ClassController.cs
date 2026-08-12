@@ -115,6 +115,12 @@ namespace SchoolManagentSystem_API.Controllers
                     x.Section.ToLower().Contains(search));
             }
 
+            // Filter by SchoolId
+            if (request.SchoolId.HasValue)
+            {
+                query = query.Where(x => x.SchoolID == request.SchoolId.Value);
+            }
+
             // Total Count
             var totalCount = await query.CountAsync();
 
